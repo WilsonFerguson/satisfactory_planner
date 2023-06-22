@@ -143,8 +143,10 @@ public class Button extends Interactable {
         HOVER_COLOR = hoverColor;
         ACTIVE_COLOR = activeColor;
         STROKE_COLOR = strokeColor;
-        TEXT_SIZE = textSize;
         TEXT_COLOR = textColor;
+        TEXT_SIZE = textSize;
+
+        defaultButton = new Button(PVector.zero(), defaultSize, defaultColor, hoverColor, activeColor, strokeColor, "", textSize, textColor);
     }
 
     public Button setCornerRadius(double radius) {

@@ -257,11 +257,13 @@ public class InputField extends Interactable {
 
         String shownText = text == "" ? defaultText : text;
         if (textAlignment.equals(TextAlignment.LEFT))
-            text(shownText, pos.x - size.x / 2 + 10, pos.y + textSize / 2 - 5);
+            // text(shownText, pos.x - size.x / 2 + 10, pos.y + textSize / 2 - 5);
+            text(shownText, pos.x - size.x / 2 + 10, pos.y);
         else if (textAlignment.equals(TextAlignment.CENTER))
             text(shownText, pos);
         else if (textAlignment.equals(TextAlignment.RIGHT))
-            text(shownText, pos.x + size.x / 2 - 10, pos.y + textSize / 2 - 5);
+            // text(shownText, pos.x + size.x / 2 - 10, pos.y + textSize / 2 - 5);
+            text(shownText, pos.x + size.x / 2 - 10, pos.y);
     }
 
 }
