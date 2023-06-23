@@ -4,13 +4,16 @@ import library.core.*;
 
 class Sketch extends Applet {
 
-  private ArrayList<Machine> machines = new ArrayList<Machine>();
+  private ArrayList<Machine> machines = new ArrayList<>();
 
   private Machine newMachine; // When user is adding a new machine, this is the
                               // one to keep track of their changes
   private InputChain newMachineInputChain;
   InputField newMachineInputField;
   Runnable newMachineRunnable;
+
+  private ArrayList<Connection> connections = new ArrayList<>();
+  private Connection newConnection; // Similar to newMachine
 
   private Panel newObjectPanel; // Opens when clicking the screen to open a
                                 // panel to add machines, splitters, etc.
@@ -47,6 +50,16 @@ class Sketch extends Applet {
 
       newObjectShouldActivate = false;
     }
+
+    for (int i = connections.size() - 1; i >= 0; i--) {
+      Connection connection = connections.get(i);
+      connection.draw();
+      if (connection.shouldRemove) {
+        connections.remove(i);
+      }
+    }
+    if (newConnection != null)
+      newConnection.draw();
 
     newMachineInputChain.draw();
     exitButton.draw();
@@ -124,7 +137,7 @@ class Sketch extends Applet {
       newObjectPanel.setActive(false);
     });
 
-    ArrayList<Button> buttons = new ArrayList<Button>();
+    ArrayList<Button> buttons = new ArrayList<>();
     buttons.add(newMachineButton);
     buttons.add(insertSplitterButton);
     buttons.add(insertMergerButton);
@@ -176,69 +189,54 @@ class Sketch extends Applet {
     // Number of input resources
     newMachineInputField = createBasicInputField("Number of input resources");
     newMachineInputField.setNumbersOnly(true);
-    newMachineRunnable = new Runnable() {
-      @Override
-      public void run() {
-        int count = parseInt(newMachineInputChain.getLatestText());
-        newMachine.setInputResourceCount(count);
+    newMachineRunnable = () -> {
+      int count = parseInt(newMachineInputChain.getLatestText());
+      newMachine.setInputResourceCount(count);
 
-        for (int i = 0; i < count; i++) {
-          // Input resource name
-          newMachineInputField =
-              createBasicInputField("Input resource of machine");
-          newMachineRunnable = new Runnable() {
-            @Override
-            public void run() {
-              newMachine.addInputResourceFromType(
-                  newMachineInputChain.getLatestText());
-            }
-          };
-          newMachineInputChain.addInputField(newMachineInputField,
-                                             newMachineRunnable);
-
-          // Input resource amount
-          newMachineInputField = createBasicInputField("Input resources/min");
-          newMachineInputField.setNumbersOnly(true);
-          newMachineRunnable = new Runnable() {
-            @Override
-            public void run() {
-              newMachine.addInputResourceFromAmount(
-                  parseFloat(newMachineInputChain.getLatestText()));
-            }
-          };
-          newMachineInputChain.addInputField(newMachineInputField,
-                                             newMachineRunnable);
-        }
-
-        // Output resource name
+      for (int i = 0; i < count; i++) {
+        // Input resource name
         newMachineInputField =
-            createBasicInputField("Output resource of machine");
-        newMachineRunnable = new Runnable() {
-          @Override
-          public void run() {
-            newMachine.setOutputResource(
-                new Resource(newMachineInputChain.getLatestText(), 0));
-          }
+            createBasicInputField("Input resource of machine");
+        newMachineRunnable = () -> {
+          newMachine.addInputResourceFromType(
+              newMachineInputChain.getLatestText());
         };
         newMachineInputChain.addInputField(newMachineInputField,
                                            newMachineRunnable);
 
-        // Output resource amount
-        newMachineInputField = createBasicInputField("Output resources/min");
+        // Input resource amount
+        newMachineInputField = createBasicInputField("Input resources/min");
         newMachineInputField.setNumbersOnly(true);
-        newMachineRunnable = new Runnable() {
-          @Override
-          public void run() {
-            newMachine.setOutputResource(
-                new Resource(newMachine.getOutputType(),
-                             parseFloat(newMachineInputChain.getLatestText())));
-            machines.add(newMachine);
-            newMachine = null;
-          }
+        newMachineRunnable = () -> {
+          newMachine.addInputResourceFromAmount(
+              parseFloat(newMachineInputChain.getLatestText()));
         };
         newMachineInputChain.addInputField(newMachineInputField,
                                            newMachineRunnable);
       }
+
+      // Output resource name
+      newMachineInputField =
+          createBasicInputField("Output resource of machine");
+      newMachineRunnable = () -> {
+        newMachine.setOutputResource(
+            new Resource(newMachineInputChain.getLatestText(), 0));
+      };
+      newMachineInputChain.addInputField(newMachineInputField,
+                                         newMachineRunnable);
+
+      // Output resource amount
+      newMachineInputField = createBasicInputField("Output resources/min");
+      newMachineInputField.setNumbersOnly(true);
+      newMachineRunnable = () -> {
+        newMachine.setOutputResource(
+            new Resource(newMachine.getOutputType(),
+                         parseFloat(newMachineInputChain.getLatestText())));
+        machines.add(newMachine);
+        newMachine = null;
+      };
+      newMachineInputChain.addInputField(newMachineInputField,
+                                         newMachineRunnable);
     };
     newMachineInputChain.addInputField(newMachineInputField,
                                        newMachineRunnable);
@@ -251,8 +249,53 @@ class Sketch extends Applet {
   private void createMerger() { println("merge"); }
 
   public void mousePressed() {
+    if (newConnection == null) {
+      for (Machine machine : machines) {
+        if (machine.isOutputNodeHovered()) {
+          newConnection = new Connection(machine.getOutputResource());
+          newConnection.addSegment(machine.getHoveredNodePosition(),
+                                   mouse.copy());
+          return;
+        }
+      }
+    }
+
     if (!newObjectPanel.isActive()) {
       newObjectShouldActivate = true;
+    }
+  }
+
+  public void mouseDragged() {
+    if (newConnection != null) {
+      newConnection.getSegments()
+          .get(newConnection.getSegments().size() - 1)
+          .end.set(mouse);
+    }
+  }
+
+  public void mouseReleased() {
+    if (newConnection != null) {
+      for (Machine machine : machines) {
+        if (machine.isInputNodeHovered()) {
+          newConnection.setEndResource(machine.getHoveredResource());
+          newConnection.getSegments()
+              .get(newConnection.getSegments().size() - 1)
+              .end.set(machine.getHoveredNodePosition());
+          connections.add(newConnection);
+        }
+      }
+      newConnection = null;
+    }
+  }
+
+  public void keyPressed() {
+    if (keyString.equals("Escape")) {
+      if (newObjectPanel.isActive()) {
+        newObjectPanel.setActive(false);
+        for (UIElement element : newObjectPanel.getElements()) {
+          element.setActive(false);
+        }
+      }
     }
   }
 }

@@ -5,16 +5,21 @@ class Machine extends PComponent implements EventIgnorer {
   private ArrayList<Resource> inputs;
   private Resource output;
 
-  public PVector position;
-  public PVector size;
+  private PVector position;
+  private PVector size;
+
+  private float gapBetweenNodes;
+  private float nodeRadius = 30;
 
   public Machine(PVector position, PVector size) {
     this.position = position.copy();
     this.size = size.copy();
+    gapBetweenNodes = size.y;
   }
 
   public void setInputResourceCount(int count) {
-    inputs = new ArrayList<Resource>(count);
+    inputs = new ArrayList<>(count);
+    gapBetweenNodes = size.y / (count + 1);
   }
 
   public void addInputResource(Resource input) { inputs.add(input); }
@@ -31,7 +36,10 @@ class Machine extends PComponent implements EventIgnorer {
 
   public void setPosition(PVector position) { this.position = position; }
 
-  public void setSize(PVector size) { this.size = size; }
+  public void setSize(PVector size) {
+    this.size = size;
+    gapBetweenNodes = size.y / (inputs.size() + 1);
+  }
 
   public String[] getInputTypes() {
     String[] types = new String[inputs.size()];
@@ -53,6 +61,78 @@ class Machine extends PComponent implements EventIgnorer {
 
   public float getOutputAmountPerMinute() { return output.amountPerMinute; }
 
+  public Resource[] getInputResources() {
+    Resource[] resources = new Resource[inputs.size()];
+    for (int i = 0; i < inputs.size(); i++) {
+      resources[i] = inputs.get(i);
+    }
+    return resources;
+  }
+
+  public Resource getInputResource(int index) { return inputs.get(index); }
+
+  public Resource getOutputResource() { return output; }
+
+  private PVector getInputNodePosition(int index) {
+    return new PVector(position.x - size.x / 2,
+                       position.y - size.y / 2 + gapBetweenNodes * (index + 1));
+  }
+
+  public boolean isInputNodeHovered() {
+    for (int i = 0; i < inputs.size(); i++) {
+      if (PVector.distSq(getInputNodePosition(i),
+                         new PVector(mouseX, mouseY)) <= nodeRadius) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean isOutputNodeHovered() {
+    return PVector.distSq(new PVector(position.x + size.x / 2, position.y),
+                          new PVector(mouseX, mouseY)) <= nodeRadius;
+  }
+
+  public boolean isNodeHovered() {
+    return isInputNodeHovered() || isOutputNodeHovered();
+  }
+
+  /**
+   * Note this function returns null if no node is hovered.
+   */
+  public Resource getHoveredResource() {
+    if (isInputNodeHovered()) {
+      for (int i = 0; i < inputs.size(); i++) {
+        if (PVector.distSq(getInputNodePosition(i),
+                           new PVector(mouseX, mouseY)) <= nodeRadius) {
+          return inputs.get(i);
+        }
+      }
+    } else if (isOutputNodeHovered()) {
+      return output;
+    }
+
+    return null;
+  }
+
+  /**
+   * Note this function returns null if no node is hovered.
+   */
+  public PVector getHoveredNodePosition() {
+    if (isInputNodeHovered()) {
+      for (int i = 0; i < inputs.size(); i++) {
+        if (PVector.distSq(getInputNodePosition(i),
+                           new PVector(mouseX, mouseY)) <= nodeRadius) {
+          return getInputNodePosition(i);
+        }
+      }
+    } else if (isOutputNodeHovered()) {
+      return new PVector(position.x + size.x / 2, position.y, nodeRadius / 2);
+    }
+
+    return null;
+  }
+
   public void draw() {
     fill(Settings.machineBackgroundColor);
     stroke(Settings.machineStrokeColor);
@@ -62,15 +142,11 @@ class Machine extends PComponent implements EventIgnorer {
     // Input/Output nodes
     fill(255);
     noStroke();
-    float gapBetweenNodes = size.y / (inputs.size() + 1);
     for (int i = 0; i < inputs.size(); i++) {
-      PVector nodePosition =
-          new PVector(position.x - size.x / 2,
-                      position.y - size.y / 2 + gapBetweenNodes * (i + 1));
-      circle(nodePosition, 15);
+      circle(getInputNodePosition(i), nodeRadius / 2);
     }
 
-    circle(position.x + size.x / 2, position.y, 15);
+    circle(position.x + size.x / 2, position.y, nodeRadius / 2);
   }
 
   @Override

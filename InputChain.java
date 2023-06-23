@@ -9,7 +9,7 @@ class InputChain extends PComponent {
 
   private Runnable onEscape;
 
-  public InputChain() { inputFields = new ArrayList<InputField>(); }
+  public InputChain() { inputFields = new ArrayList<>(); }
 
   /**
    * Starts the chain by setting the first input field to active.
@@ -49,16 +49,18 @@ class InputChain extends PComponent {
    *
    */
   public void addInputField(InputField inputField) {
-    inputField.onEnter(new Runnable() {
-      @Override
-      public void run() {
-        latestText = inputField.getText();
+    inputField.onEnter(() -> {
+      if (inputField.getText().equals("")) {
+        shouldProgress = true;
+        return;
+      }
 
-        removeFirstInputField();
-        if (inputFields.size() >= 1) {
-          inputFields.get(0).setActive(true);
-          shouldProgress = true;
-        }
+      latestText = inputField.getText();
+
+      removeFirstInputField();
+      if (inputFields.size() >= 1) {
+        inputFields.get(0).setActive(true);
+        shouldProgress = true;
       }
     });
 
@@ -73,17 +75,19 @@ class InputChain extends PComponent {
    * chain will be displayed.
    */
   public void addInputField(InputField inputField, Runnable onEnter) {
-    Runnable finalOnEnter = new Runnable() {
-      @Override
-      public void run() {
-        latestText = inputField.getText();
-        onEnter.run();
+    Runnable finalOnEnter = () -> {
+      if (inputField.getText().equals("")) {
+        shouldProgress = true;
+        return;
+      }
 
-        removeFirstInputField();
-        if (inputFields.size() >= 1) {
-          inputFields.get(0).setActive(true);
-          shouldProgress = true;
-        }
+      latestText = inputField.getText();
+      onEnter.run();
+
+      removeFirstInputField();
+      if (inputFields.size() >= 1) {
+        inputFields.get(0).setActive(true);
+        shouldProgress = true;
       }
     };
 
